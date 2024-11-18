@@ -63,7 +63,7 @@ export default function HomeScreen() {
         <HelloWave />
       </ThemedView>
 
-      <ThemedView style={styles.gameContainer}> {/* Make sure upgrades are INSIDE this View */}
+      <ThemedView style={styles.gameContainer}>
         <ThemedText type="title">Clicks: {clicks}</ThemedText>
         <Button mode="contained" onPress={handleButtonClick}>
           Click Me!
@@ -74,6 +74,7 @@ export default function HomeScreen() {
           mode="contained"
           onPress={buyAutoClicker}
           disabled={clicks < autoClickerCost}
+          style={[styles.button, clicks < autoClickerCost && styles.disabledButton]} // Apply button styles
         >
           Buy Auto-Clicker ({autoClickerCost} clicks)
         </Button>
@@ -86,7 +87,7 @@ export default function HomeScreen() {
                 mode="contained"
                 onPress={() => buyUpgrade(index)}
                 disabled={clicks < upgrade.cost}
-                style={[styles.upgradeButton, clicks < upgrade.cost && styles.disabledUpgradeButton]} // Conditional styling
+                style={[styles.button, clicks < upgrade.cost && styles.disabledButton]} // Apply button styles here too
               >
                 {upgrade.name} ({upgrade.cost} clicks)
               </Button>
@@ -120,6 +121,9 @@ const styles = StyleSheet.create({
     left: 0,
     position: 'absolute',
   },
+  button: { // Style for ALL buttons
+    marginTop: 10,
+  },
   upgradesContainer: {
     alignItems: 'center',
     marginTop: 20,
@@ -132,6 +136,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   disabledUpgradeButton: { // Style for disabled buttons
+    backgroundColor: 'gray',
+  },
+  disabledButton: { // Style for disabled buttons
     backgroundColor: 'gray',
   },
 });
