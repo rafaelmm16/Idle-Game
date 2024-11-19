@@ -1,10 +1,11 @@
-import { Image, StyleSheet, Platform, View } from 'react-native';
+import { Image, StyleSheet, Platform, Text, View, Animated } from 'react-native';
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Button } from 'react-native-paper';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useSharedValue, withTiming, useAnimatedStyle } from 'react-native-reanimated';
 
 export default function HomeScreen() {
   const [clicks, setClicks] = useState(0);
@@ -17,38 +18,59 @@ export default function HomeScreen() {
     { name: 'Mega Clicks', cost: 2000, cpsBoost: 100 },
   ]);
 
+  const clicksSharedValue = useSharedValue(0);
+  const buttonScale = useSharedValue(1);
+
+  const buttonAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: withTiming(buttonScale.value, { duration: 100 }) }],
+    };
+  });
+
+  useEffect(() => {
+    clicksSharedValue.value = clicks;
+  }, [clicks]);
+
   useEffect(() => {
     let interval: string | number | NodeJS.Timeout | undefined;
+
     if (clicksPerSecond > 0) {
       interval = setInterval(() => {
-        setClicks((prevClicks) => prevClicks + clicksPerSecond);
+        setClicks(prevClicks => {
+          const newClicks = prevClicks + clicksPerSecond;
+          clicksSharedValue.value = newClicks;
+          return newClicks;
+        });
       }, 1000);
     }
+
     return () => clearInterval(interval);
   }, [clicksPerSecond]);
 
   const handleButtonClick = () => {
-    setClicks((prevClicks) => prevClicks + 1);
+    buttonScale.value = 0.9;
+    setTimeout(() => {
+      buttonScale.value = 1;
+    }, 100);
+    setClicks(prevClicks => prevClicks + 1);
   };
 
   const buyAutoClicker = () => {
     if (clicks >= autoClickerCost) {
-      setClicks((prevClicks) => prevClicks - autoClickerCost);
-      setAutoClickers((prevAutoClickers) => prevAutoClickers + 1);
-      setClicksPerSecond((prevCPS) => prevCPS + 1);
-      setAutoClickerCost((prevCost) => Math.floor(prevCost * 1.15));
+      setClicks(prevClicks => prevClicks - autoClickerCost);
+      setAutoClickers(prevAutoClickers => prevAutoClickers + 1);
+      setClicksPerSecond(prevCPS => prevCPS + 1);
+      setAutoClickerCost(prevCost => Math.floor(prevCost * 1.15));
     }
   };
 
   const buyUpgrade = (index: number) => {
     const upgrade = upgrades[index];
     if (clicks >= upgrade.cost) {
-      setClicks((prevClicks) => prevClicks - upgrade.cost);
-      setClicksPerSecond((prevCPS) => prevCPS + upgrade.cpsBoost);
-
-      // Update the upgrade cost and make a new upgrades array
+      setClicks(prevClicks => prevClicks - upgrade.cost);
+      setClicksPerSecond(prevCPS => prevCPS + upgrade.cpsBoost);
       const newUpgrades = [...upgrades];
-      newUpgrades[index] = { ...upgrade, cost: Math.floor(upgrade.cost * 1.5) }; // Increase cost by 50%
+      newUpgrades[index] = { ...upgrade, cost: Math.floor(upgrade.cost * 1.5) };
       setUpgrades(newUpgrades);
     }
   };
@@ -64,22 +86,26 @@ export default function HomeScreen() {
       </ThemedView>
 
       <ThemedView style={styles.gameContainer}>
-        <ThemedText type="title">Clicks: {clicks}</ThemedText>
-        <Button mode="contained" onPress={handleButtonClick}>
-          Click Me!
-        </Button>
-        <ThemedText>Clicks Per Second: {clicksPerSecond}</ThemedText>
-        <ThemedText>Auto-Clickers: {autoClickers}</ThemedText>
+        <ThemedText type="title"><Text>Clicks: {clicksSharedValue.value}</Text></ThemedText> {/* Wrap with Text */}
+
+        <Animated.View style={[buttonAnimatedStyle]}>
+          <Button mode="contained" onPress={handleButtonClick}>
+            <Text>Click Me!</Text> {/* Wrap with Text */}
+          </Button>
+        </Animated.View>
+
+        <ThemedText><Text>Clicks Per Second: {clicksPerSecond}</Text></ThemedText> {/* Wrap with Text */}
+        <ThemedText><Text>Auto-Clickers: {autoClickers}</Text></ThemedText> {/* Wrap with Text */}
         <Button
           mode="contained"
           onPress={buyAutoClicker}
           disabled={clicks < autoClickerCost}
-          style={[styles.button, clicks < autoClickerCost && styles.disabledButton]} // Apply button styles
+          style={[styles.button, clicks < autoClickerCost && styles.disabledButton]}
         >
-          Buy Auto-Clicker ({autoClickerCost} clicks)
+          <Text>Buy Auto-Clicker ({autoClickerCost} clicks)</Text> {/* Wrap with Text */}
         </Button>
 
-        {/* Upgrades Section */}
+
         <ThemedView style={styles.upgradesContainer}>
           {upgrades.map((upgrade, index) => (
             <View key={index} style={styles.upgradeItem}>
@@ -87,9 +113,9 @@ export default function HomeScreen() {
                 mode="contained"
                 onPress={() => buyUpgrade(index)}
                 disabled={clicks < upgrade.cost}
-                style={[styles.button, clicks < upgrade.cost && styles.disabledButton]} // Apply button styles here too
+                style={[styles.button, clicks < upgrade.cost && styles.disabledButton]}
               >
-                {upgrade.name} ({upgrade.cost} clicks)
+                <Text>{upgrade.name} ({upgrade.cost} clicks)</Text> {/* Wrap with Text */}
               </Button>
             </View>
           ))}

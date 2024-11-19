@@ -38,7 +38,7 @@ export default function TabLayout() {
         name="explore"
         options={{
           title: 'Explore',
-          tabBarIcon: ({ color }) => <Ionicons name="settings-sharp" size={24} color="black" />,
+          tabBarIcon: ({ color }) => <Ionicons name="settings" size={24} color="black" />,
         }}
       />
     </Tabs>
