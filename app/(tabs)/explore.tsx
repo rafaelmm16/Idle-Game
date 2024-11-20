@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Text, View, Switch, Button, StyleSheet } from 'react-native';
+import { Text, View, Switch, StyleSheet, TouchableOpacity } from 'react-native';
 import { Picker } from '@react-native-community/picker';
 
 interface ExploreSettings {
@@ -26,25 +26,25 @@ const Explore: React.FC = () => {
 
     const containerStyles = StyleSheet.create({
         light: {
+            flex: 1, // Fill the entire screen
             padding: 20,
             backgroundColor: 'white',
         },
         dark: {
+            flex: 1, // Fill the entire screen
             padding: 20,
             backgroundColor: 'black',
-            color: 'white', // Make sure text is visible in dark mode
         },
     });
 
     const textStyles = StyleSheet.create({
         light: {
-          color: 'black',
+            color: 'black',
         },
         dark: {
-          color: 'white',
+            color: 'white',
         },
-      });
-    
+    });
 
     return (
         <View style={settings.darkTheme ? containerStyles.dark : containerStyles.light}>
@@ -55,9 +55,9 @@ const Explore: React.FC = () => {
                 <Switch
                     value={settings.notifications}
                     onValueChange={(value) => handleChange('notifications', value)}
-                    trackColor={{ false: "#767577", true: "#81b0ff" }} // Customize track color
-                    thumbColor={settings.notifications ? "#f5dd4b" : "#f4f3f4"} // Customize thumb color (Android)
-                    ios_backgroundColor="#3e3e3e" // Customize iOS background color
+                    trackColor={{ false: "#767577", true: "#81b0ff" }}
+                    thumbColor={settings.notifications ? "#f5dd4b" : "#f4f3f4"}
+                    ios_backgroundColor="#3e3e3e"
                 />
             </View>
 
@@ -72,33 +72,32 @@ const Explore: React.FC = () => {
                 />
             </View>
 
-
-
             <View style={styles.setting}>
                 <Text style={settings.darkTheme ? textStyles.dark : textStyles.light}>Idioma:</Text>
                 <Picker
                     selectedValue={settings.language}
                     onValueChange={(value) => handleChange('language', value as ExploreSettings['language'])}
-                    style={[styles.picker, settings.darkTheme && { color: 'white' }]}  // Conditional styling for picker
+                    style={[styles.picker, settings.darkTheme ? { color: 'white', backgroundColor: 'gray' } : { backgroundColor: 'white' }]} // Include background color change
                     ref={pickerRef}
-                  
                 >
-                     <Picker.Item color={settings.darkTheme ? 'white' : 'black'}  label="Português (Brasil)" value="pt-BR" />
-                     <Picker.Item color={settings.darkTheme ? 'white' : 'black'} label="Inglês (EUA)" value="en-US" />
-                     <Picker.Item color={settings.darkTheme ? 'white' : 'black'} label="Espanhol (Espanha)" value="es-ES" />
-
-
+                    <Picker.Item color={settings.darkTheme ? 'white' : 'black'} label="Português (Brasil)" value="pt-BR" />
+                    <Picker.Item color={settings.darkTheme ? 'white' : 'black'} label="Inglês (EUA)" value="en-US" />
+                    <Picker.Item color={settings.darkTheme ? 'white' : 'black'} label="Espanhol (Espanha)" value="es-ES" />
                 </Picker>
             </View>
 
-            <Button
-                title="Salvar"
+            <TouchableOpacity
+                style={[
+                    styles.saveButton,
+                    settings.darkTheme ? styles.darkButton : styles.lightButton
+                ]}
                 onPress={() => {
                     console.log('Salvar configurações:', settings);
                     alert('Configurações salvas!');
                 }}
-                color={settings.darkTheme ? 'white' : 'black'} // Button color based on theme
-            />
+            >
+                <Text style={settings.darkTheme ? styles.darkButtonText : styles.lightButtonText}>Salvar</Text>
+            </TouchableOpacity>
         </View>
     );
 };
@@ -108,9 +107,24 @@ const styles = StyleSheet.create({
     title: { fontSize: 20, fontWeight: 'bold', marginBottom: 20 },
     setting: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
     picker: { height: 50, width: 150 },
-
-
-
+    saveButton: {
+        padding: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+        marginTop: 20, // Add margin
+    },
+    lightButton: {
+        backgroundColor: 'blue',
+    },
+    darkButton: {
+        backgroundColor: 'gray',
+    },
+    lightButtonText: {
+        color: 'white',
+    },
+    darkButtonText: {
+        color: 'black',
+    },
 });
 
 export default Explore;

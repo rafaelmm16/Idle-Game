@@ -1,13 +1,15 @@
-import { Image, StyleSheet, Platform, Text, View, Animated } from 'react-native';
+import { Image, StyleSheet, Platform, Text, View, Animated, AppState, AppStateStatus } from 'react-native'; // Import AppState
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Button } from 'react-native-paper';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react'; // Removed useRef
 import { useSharedValue, withTiming, useAnimatedStyle } from 'react-native-reanimated';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomeScreen() {
+  const [loading, setLoading] = useState(true); // Add a loading state
   const [clicks, setClicks] = useState(0);
   const [clicksPerSecond, setClicksPerSecond] = useState(0);
   const [autoClickers, setAutoClickers] = useState(0);
@@ -46,6 +48,78 @@ export default function HomeScreen() {
 
     return () => clearInterval(interval);
   }, [clicksPerSecond]);
+
+  useEffect(() => {
+    const loadGameData = async () => {
+      try {
+        const savedClicks = await AsyncStorage.getItem('clicks');
+        const savedAutoClickers = await AsyncStorage.getItem('autoClickers');
+        const savedAutoClickerCost = await AsyncStorage.getItem('autoClickerCost');
+        const savedUpgrades = await AsyncStorage.getItem('upgrades');
+
+        if (savedClicks !== null) {
+          const parsedClicks = parseInt(savedClicks, 10);
+          setClicks(parsedClicks);
+          clicksSharedValue.value = parsedClicks; 
+        }
+        if (savedAutoClickers !== null) {
+          const parsedAutoClickers = parseInt(savedAutoClickers, 10);
+          setAutoClickers(parsedAutoClickers);
+          setClicksPerSecond(parsedAutoClickers); 
+        }
+        if (savedAutoClickerCost !== null) {
+          setAutoClickerCost(parseInt(savedAutoClickerCost, 10));
+        }
+        if (savedUpgrades !== null) {
+          const parsedUpgrades = JSON.parse(savedUpgrades);
+          setUpgrades(parsedUpgrades);
+
+          let totalCpsBoost = 0;
+          parsedUpgrades.forEach((upgrade: { cpsBoost: number; }) => { // No need to re-parse here
+            totalCpsBoost += upgrade.cpsBoost;
+          });
+          setClicksPerSecond(clicksPerSecond + totalCpsBoost); // Add to existing CPS
+        }
+      } catch (error) {
+        console.error('Error loading game data:', error);
+      } finally {
+        setLoading(false); 
+      }
+    };
+
+    loadGameData();
+  }, []); // Empty dependency array ensures this runs only once
+
+  useEffect(() => {
+    const saveGameData = async () => {
+      try {
+        await AsyncStorage.setItem('clicks', clicks.toString());
+        await AsyncStorage.setItem('autoClickers', autoClickers.toString());
+        await AsyncStorage.setItem('autoClickerCost', autoClickerCost.toString());
+        await AsyncStorage.setItem('upgrades', JSON.stringify(upgrades));
+      } catch (error) {
+        console.error('Error saving game data:', error);
+      }
+    };
+
+    // Save every 5 seconds (adjust as needed)
+    const saveInterval = setInterval(saveGameData, 5000);
+
+    const appStateSubscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => { // Type the nextAppState parameter
+      if (nextAppState !== 'active') {
+        saveGameData();
+      }
+    });
+
+    return () => {
+      clearInterval(saveInterval);
+      appStateSubscription.remove(); // Use remove() on the subscription
+    };
+  }, [clicks, autoClickers, autoClickerCost, upgrades]);
+
+  if (loading) { // Show a loading indicator while loading data
+    return <View><Text>Loading...</Text></View>;
+  }
 
   const handleButtonClick = () => {
     buttonScale.value = 0.9;
