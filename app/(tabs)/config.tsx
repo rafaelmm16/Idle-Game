@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Text, View, Switch, StyleSheet, TouchableOpacity } from 'react-native';
+import { Text, View, Switch, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface ExploreSettings {
@@ -89,6 +89,46 @@ const Config: React.FC = () => {
         },
     });
 
+    const handleResetProgress = async () => {
+        Alert.alert(
+            'Resetar Progresso',
+            'Tem certeza de que deseja resetar o seu progresso? Esta ação não pode ser desfeita.',
+            [
+                {
+                    text: 'Cancelar',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Resetar',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            // Here you would reset any progress data you have.
+                            // This might involve clearing AsyncStorage keys related to progress,
+                            // setting state variables back to initial values, etc.
+
+                            // Example: Clearing all AsyncStorage
+                            await AsyncStorage.clear();
+
+                            // Example: Resetting settings to default
+                            setSettings({
+                                notifications: true,
+                                darkTheme: false,
+                                language: 'pt-BR',
+                            });
+
+
+                            alert('Progresso resetado com sucesso!');
+                        } catch (error) {
+                            console.error("Error resetting progress:", error);
+                            alert('Ocorreu um erro ao resetar o progresso.');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
 
     return (
         <View style={settings.darkTheme ? containerStyles.dark : containerStyles.light}>
@@ -128,6 +168,13 @@ const Config: React.FC = () => {
             >
                 <Text style={settings.darkTheme ? buttonTextStyles.dark : buttonTextStyles.light}>Salvar</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+                style={[styles.resetButton, settings.darkTheme ? buttonStyles.dark : buttonStyles.light]}
+                onPress={handleResetProgress}
+            >
+                <Text style={settings.darkTheme ? buttonTextStyles.dark : buttonTextStyles.light}>Resetar Progresso</Text>
+            </TouchableOpacity>
         </View>
     );
 };
@@ -140,6 +187,13 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         alignItems: 'center',
         marginTop: 20,
+    },
+    resetButton: {
+        padding: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+        marginTop: 20,  // Add some margin
+        backgroundColor: 'red', // Consider a different color for destructive actions
     },
 });
 

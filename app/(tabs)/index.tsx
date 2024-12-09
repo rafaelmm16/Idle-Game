@@ -1,23 +1,27 @@
-import { Image, StyleSheet, Platform, Text, View, Animated, AppState, AppStateStatus } from 'react-native'; // Import AppState
+import { Image, StyleSheet, Platform, Text, View, Animated, AppState, AppStateStatus } from 'react-native';
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Button } from 'react-native-paper';
-import React, { useState, useEffect } from 'react'; // Removed useRef
+import React, { useState, useEffect } from 'react';
 import { useSharedValue, withTiming, useAnimatedStyle } from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomeScreen() {
-  const [loading, setLoading] = useState(true); // Add a loading state
+  const [loading, setLoading] = useState(true);
   const [clicks, setClicks] = useState(0);
-  const [clicksPerSecond, setClicksPerSecond] = useState(0);
+  const [clicksPerSecond, setClicksPerSecond] = useState(0); // Not used directly for click accumulation anymore
   const [autoClickers, setAutoClickers] = useState(0);
   const [autoClickerCost, setAutoClickerCost] = useState(10);
   const [upgrades, setUpgrades] = useState([
     { name: 'Enhanced Clicking', cost: 100, cpsBoost: 5 },
     { name: 'Super Clicks', cost: 500, cpsBoost: 20 },
     { name: 'Mega Clicks', cost: 2000, cpsBoost: 100 },
+  ]);
+  const [multipliers, setMultipliers] = useState([
+    { name: 'Click Multiplier', level: 0, cost: 100, multiplier: 2 },
+    { name: 'Auto-Clicker Multiplier', level: 0, cost: 500, multiplier: 1.5 },
   ]);
 
   const clicksSharedValue = useSharedValue(0);
@@ -29,17 +33,25 @@ export default function HomeScreen() {
     };
   });
 
+  // Calculate total click multiplier
+  const clickMultiplier = multipliers.reduce((total, mult) => total * (mult.multiplier ** mult.level), 1);
+
+    // Calculate total auto-clicker output
+  const autoClickerOutput = autoClickers * multipliers.find(m => m.name === 'Auto-Clicker Multiplier')?.multiplier ** multipliers.find(m => m.name === 'Auto-Clicker Multiplier')?.level || 1;
+
+
   useEffect(() => {
     clicksSharedValue.value = clicks;
   }, [clicks]);
 
+
   useEffect(() => {
     let interval: string | number | NodeJS.Timeout | undefined;
 
-    if (clicksPerSecond > 0) {
+    if (autoClickerOutput > 0) {
       interval = setInterval(() => {
         setClicks(prevClicks => {
-          const newClicks = prevClicks + clicksPerSecond;
+          const newClicks = prevClicks + autoClickerOutput; 
           clicksSharedValue.value = newClicks;
           return newClicks;
         });
@@ -47,7 +59,7 @@ export default function HomeScreen() {
     }
 
     return () => clearInterval(interval);
-  }, [clicksPerSecond]);
+  }, [autoClickerOutput]);
 
   useEffect(() => {
     const loadGameData = async () => {
@@ -56,39 +68,37 @@ export default function HomeScreen() {
         const savedAutoClickers = await AsyncStorage.getItem('autoClickers');
         const savedAutoClickerCost = await AsyncStorage.getItem('autoClickerCost');
         const savedUpgrades = await AsyncStorage.getItem('upgrades');
+        const savedMultipliers = await AsyncStorage.getItem('multipliers');
 
         if (savedClicks !== null) {
-          const parsedClicks = parseInt(savedClicks, 10);
-          setClicks(parsedClicks);
-          clicksSharedValue.value = parsedClicks; 
+          setClicks(parseInt(savedClicks, 10));
+          clicksSharedValue.value = parseInt(savedClicks, 10);
         }
+
         if (savedAutoClickers !== null) {
-          const parsedAutoClickers = parseInt(savedAutoClickers, 10);
-          setAutoClickers(parsedAutoClickers);
-          setClicksPerSecond(parsedAutoClickers); 
+          setAutoClickers(parseInt(savedAutoClickers, 10));
         }
+
         if (savedAutoClickerCost !== null) {
           setAutoClickerCost(parseInt(savedAutoClickerCost, 10));
         }
-        if (savedUpgrades !== null) {
-          const parsedUpgrades = JSON.parse(savedUpgrades);
-          setUpgrades(parsedUpgrades);
 
-          let totalCpsBoost = 0;
-          parsedUpgrades.forEach((upgrade: { cpsBoost: number; }) => { // No need to re-parse here
-            totalCpsBoost += upgrade.cpsBoost;
-          });
-          setClicksPerSecond(clicksPerSecond + totalCpsBoost); // Add to existing CPS
+        if (savedUpgrades !== null) {
+          setUpgrades(JSON.parse(savedUpgrades));
         }
+        if (savedMultipliers !== null) {
+          setMultipliers(JSON.parse(savedMultipliers));
+        }
+
       } catch (error) {
         console.error('Error loading game data:', error);
       } finally {
-        setLoading(false); 
+        setLoading(false);
       }
     };
 
     loadGameData();
-  }, []); // Empty dependency array ensures this runs only once
+  }, []);
 
   useEffect(() => {
     const saveGameData = async () => {
@@ -97,15 +107,17 @@ export default function HomeScreen() {
         await AsyncStorage.setItem('autoClickers', autoClickers.toString());
         await AsyncStorage.setItem('autoClickerCost', autoClickerCost.toString());
         await AsyncStorage.setItem('upgrades', JSON.stringify(upgrades));
+        await AsyncStorage.setItem('multipliers', JSON.stringify(multipliers));
+
+
       } catch (error) {
         console.error('Error saving game data:', error);
       }
     };
 
-    // Save every 5 seconds (adjust as needed)
     const saveInterval = setInterval(saveGameData, 5000);
 
-    const appStateSubscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => { // Type the nextAppState parameter
+    const appStateSubscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
       if (nextAppState !== 'active') {
         saveGameData();
       }
@@ -113,41 +125,58 @@ export default function HomeScreen() {
 
     return () => {
       clearInterval(saveInterval);
-      appStateSubscription.remove(); // Use remove() on the subscription
+      appStateSubscription.remove();
     };
-  }, [clicks, autoClickers, autoClickerCost, upgrades]);
+  }, [clicks, autoClickers, autoClickerCost, upgrades, multipliers]);
 
-  if (loading) { // Show a loading indicator while loading data
+  if (loading) {
     return <View><Text>Loading...</Text></View>;
   }
 
   const handleButtonClick = () => {
+    setClicks(prevClicks => prevClicks + Math.round(1 * clickMultiplier));
     buttonScale.value = 0.9;
     setTimeout(() => {
       buttonScale.value = 1;
     }, 100);
-    setClicks(prevClicks => prevClicks + 1);
   };
 
   const buyAutoClicker = () => {
     if (clicks >= autoClickerCost) {
       setClicks(prevClicks => prevClicks - autoClickerCost);
       setAutoClickers(prevAutoClickers => prevAutoClickers + 1);
-      setClicksPerSecond(prevCPS => prevCPS + 1);
       setAutoClickerCost(prevCost => Math.floor(prevCost * 1.15));
     }
   };
+
 
   const buyUpgrade = (index: number) => {
     const upgrade = upgrades[index];
     if (clicks >= upgrade.cost) {
       setClicks(prevClicks => prevClicks - upgrade.cost);
-      setClicksPerSecond(prevCPS => prevCPS + upgrade.cpsBoost);
       const newUpgrades = [...upgrades];
       newUpgrades[index] = { ...upgrade, cost: Math.floor(upgrade.cost * 1.5) };
       setUpgrades(newUpgrades);
+      // Here would apply the cpsBoost.  Since it modifies autoClickerOutput,
+      // the useEffect listening to autoClickerOutput will trigger and update
+      // the click rate.  No direct click update needed here.
     }
   };
+
+    const buyMultiplier = (index: number) => {
+    const multiplier = multipliers[index];
+    if (clicks >= multiplier.cost) {
+      setClicks(prevClicks => prevClicks - multiplier.cost);
+      const newMultipliers = [...multipliers];
+      newMultipliers[index] = {
+        ...multiplier,
+        level: multiplier.level + 1,
+        cost: Math.floor(multiplier.cost * 1.5),
+      };
+      setMultipliers(newMultipliers);
+    }
+  };
+
 
   return (
     <ParallaxScrollView
@@ -168,7 +197,7 @@ export default function HomeScreen() {
           </Button>
         </Animated.View>
 
-        <ThemedText><Text>Clicks Per Second: {clicksPerSecond}</Text></ThemedText> {/* Wrap with Text */}
+        <ThemedText><Text>Auto Clicks/Second: {autoClickerOutput}</Text></ThemedText> {/* Updated! */}
         <ThemedText><Text>Auto-Clickers: {autoClickers}</Text></ThemedText> {/* Wrap with Text */}
         <Button
           mode="contained"
@@ -179,17 +208,35 @@ export default function HomeScreen() {
           <Text>Buy Auto-Clicker ({autoClickerCost} clicks)</Text> {/* Wrap with Text */}
         </Button>
 
-
         <ThemedView style={styles.upgradesContainer}>
-          {upgrades.map((upgrade, index) => (
-            <View key={index} style={styles.upgradeItem}>
+        {upgrades.map((upgrade, index) => (
+          <View key={index} style={styles.upgradeItem}>
+            <Button
+              mode="contained"
+              onPress={() => buyUpgrade(index)}
+              disabled={clicks < upgrade.cost}
+              style={[styles.upgradeButton, clicks < upgrade.cost && styles.disabledUpgradeButton]}
+            >
+              <Text>
+                {upgrade.name} ({upgrade.cost} clicks)
+              </Text>
+            </Button>
+          </View>
+        ))}
+      </ThemedView>
+
+        <ThemedView style={styles.multipliersContainer}>
+          {multipliers.map((multiplier, index) => (
+            <View key={index} style={styles.multiplierItem}>
               <Button
                 mode="contained"
-                onPress={() => buyUpgrade(index)}
-                disabled={clicks < upgrade.cost}
-                style={[styles.button, clicks < upgrade.cost && styles.disabledButton]}
+                onPress={() => buyMultiplier(index)}
+                disabled={clicks < multiplier.cost}
+                style={[styles.button, clicks < multiplier.cost && styles.disabledButton]}
               >
-                <Text>{upgrade.name} ({upgrade.cost} clicks)</Text> {/* Wrap with Text */}
+                <Text>
+                  {multiplier.name} (Level {multiplier.level}) ({multiplier.cost} clicks)
+                </Text>
               </Button>
             </View>
           ))}
@@ -240,5 +287,13 @@ const styles = StyleSheet.create({
   },
   disabledButton: { // Style for disabled buttons
     backgroundColor: 'gray',
+  },
+  multipliersContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  multiplierItem: {
+    width: '100%',
+    marginBottom: 10,
   },
 });
