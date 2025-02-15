@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Button, TouchableOpacity, Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Header from './components/Header';
-import Footer from './components/Footer';
+import NavigationBar from './components/NavigationBar';
+import ShopScreen from './screens/ShopScreen';
+import SettingsScreen from './screens/SettingsScreen';
 
 export default function App() {
   const [points, setPoints] = useState(0);
   const [autoPoints, setAutoPoints] = useState(0);
   const [scale] = useState(new Animated.Value(1));
+  const [currentTab, setCurrentTab] = useState('game');
 
   useEffect(() => {
     const loadProgress = async () => {
@@ -50,22 +53,63 @@ export default function App() {
     }
   };
 
+  const buyDoublePoints = () => {
+    if (points >= 50) {
+      setPoints(points - 50);
+      setAutoPoints(autoPoints * 2);
+    }
+  };
+
+  const buyTriplePoints = () => {
+    if (points >= 100) {
+      setPoints(points - 100);
+      setAutoPoints(autoPoints * 3);
+    }
+  };
+
+  const formatNumber = (num: number) => {
+    return num.toExponential(2);
+  };
+
+  const renderContent = () => {
+    switch (currentTab) {
+      case 'game':
+        return (
+          <>
+            <Text style={styles.points}>Pontos: {formatNumber(points)}</Text>
+            <Animated.View style={{ transform: [{ scale }] }}>
+              <TouchableOpacity style={styles.clickButton} onPress={handleClick}>
+                <Text style={styles.clickButtonText}>Clique!</Text>
+              </TouchableOpacity>
+            </Animated.View>
+            <TouchableOpacity style={styles.autoClickerButton} onPress={buyAutoClicker}>
+              <Text style={styles.autoClickerButtonText}>Comprar Auto Clicker (10 pontos)</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.doublePointsButton} onPress={buyDoublePoints}>
+              <Text style={styles.doublePointsButtonText}>Dobrar Pontos (50 pontos)</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.triplePointsButton} onPress={buyTriplePoints}>
+              <Text style={styles.triplePointsButtonText}>Triplicar Pontos (100 pontos)</Text>
+            </TouchableOpacity>
+            <Text style={styles.autoPoints}>Auto Clickers: {formatNumber(autoPoints)}</Text>
+          </>
+        );
+      case 'shop':
+        return <ShopScreen />;
+      case 'settings':
+        return <SettingsScreen />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Header />
       <View style={styles.content}>
-        <Text style={styles.points}>Pontos: {points}</Text>
-        <Animated.View style={{ transform: [{ scale }] }}>
-          <TouchableOpacity style={styles.clickButton} onPress={handleClick}>
-            <Text style={styles.clickButtonText}>Clique!</Text>
-          </TouchableOpacity>
-        </Animated.View>
-        <TouchableOpacity style={styles.autoClickerButton} onPress={buyAutoClicker}>
-          <Text style={styles.autoClickerButtonText}>Comprar Auto Clicker (10 pontos)</Text>
-        </TouchableOpacity>
-        <Text style={styles.autoPoints}>Auto Clickers: {autoPoints}</Text>
+        {renderContent()}
       </View>
-      <Footer />
+      <NavigationBar currentTab={currentTab} setCurrentTab={setCurrentTab} />
     </View>
   );
 }
@@ -79,6 +123,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingBottom: 50, // Adicionar espaço para a barra de navegação
   },
   title: {
     fontSize: 28,
@@ -113,6 +158,42 @@ const styles = StyleSheet.create({
   },
   autoClickerButtonText: {
     fontSize: 16,
+    color: '#ffffff',
+  },
+  doublePointsButton: {
+    backgroundColor: '#ff6347',
+    padding: 15,
+    borderRadius: 10,
+    marginVertical: 10,
+  },
+  doublePointsButtonText: {
+    fontSize: 16,
+    color: '#ffffff',
+  },
+  triplePointsButton: {
+    backgroundColor: '#ffa500',
+    padding: 15,
+    borderRadius: 10,
+    marginVertical: 10,
+  },
+  triplePointsButtonText: {
+    fontSize: 16,
+    color: '#ffffff',
+  },
+  shop: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shopText: {
+    fontSize: 24,
+    color: '#ffffff',
+  },
+  settings: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  settingsText: {
+    fontSize: 24,
     color: '#ffffff',
   },
 });
