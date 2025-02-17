@@ -95,7 +95,7 @@ export default function App() {
           </>
         );
       case 'shop':
-        return <ShopScreen />;
+        return <ShopScreen points={points} setPoints={setPoints} autoPoints={autoPoints} setAutoPoints={setAutoPoints} />;
       case 'settings':
         return <SettingsScreen />;
       default:
