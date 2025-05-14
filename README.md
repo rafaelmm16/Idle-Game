@@ -28,4 +28,4 @@ yarn install
 npx expo start
 ```
 
-## ⚠️ Projeto em desenvolvimento. Novas funcionalidades serão adicionadas em breve.
+## ⚠️ Projeto em desenvolvimento.
